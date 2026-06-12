@@ -9,6 +9,7 @@ from telegram.ext import (
 
 BOT_TOKEN = "8703083706:AAGErnqq5Bod296TLDTPbt72XRG-3yskd-U"
 ADMIN_IDS = [513723806]
+BOT_USERNAME = "error404upload_bot"
 DATA_FILE = "data.json"
 
 def load_data():
@@ -33,7 +34,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if uid in data["users"]:
         acc = data["users"][uid]
         await update.message.reply_text(
-            f"✅ اکانت شما:\n\n👤 یوزرنیم: `{acc['username']}`\n🔑 پسورد: `{acc['password']}`",
+            f"✅ اکانت شما:\n\n👤 یوزرنیم:\n`{acc['username']}`\n\n🔑 پسورد:\n`{acc['password']}`",
             parse_mode="Markdown"
         )
         return
@@ -50,21 +51,39 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "telegram_username": user.username or "ندارد"
     }
     save_data(data)
+
     await update.message.reply_text(
-        f"🎉 اکانت شما:\n\n👤 یوزرنیم: `{acc['username']}`\n🔑 پسورد: `{acc['password']}`",
+        f"🎉 اکانت شما:\n\n👤 یوزرنیم:\n`{acc['username']}`\n\n🔑 پسورد:\n`{acc['password']}`",
         parse_mode="Markdown"
     )
+
+    for admin_id in ADMIN_IDS:
+        try:
+            await context.bot.send_message(
+                chat_id=admin_id,
+                text=f"🔔 کاربر جدید اکانت گرفت!\n\n"
+                     f"👤 نام: {user.full_name}\n"
+                     f"🆔 آیدی: `{uid}`\n"
+                     f"📱 یوزرنیم: @{user.username or 'ندارد'}",
+                parse_mode="Markdown"
+            )
+        except:
+            pass
 
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
         return
+    bot_link = f"https://t.me/{BOT_USERNAME}"
     keyboard = [
         [InlineKeyboardButton("👥 لیست کاربران", callback_data="list_users")],
         [InlineKeyboardButton("➕ افزودن اکانت", callback_data="add_account")],
         [InlineKeyboardButton("📢 پیام همگانی", callback_data="broadcast")],
         [InlineKeyboardButton("📊 آمار", callback_data="stats")],
     ]
-    await update.message.reply_text("🔧 پنل مدیریت:", reply_markup=InlineKeyboardMarkup(keyboard))
+    await update.message.reply_text(
+        f"🔧 پنل مدیریت:\n\n🔗 لینک ربات:\n{bot_link}",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -91,9 +110,9 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = []
         for uid, info in data["users"].items():
             banned = uid in data["banned"]
-            text += f"{'🚫' if banned else '✅'} {info['name']} | @{info['telegram_username']} | {uid}\n"
+            text += f"{'🚫' if banned else '✅'} {info['name']} | @{info['telegram_username']} | `{uid}`\n"
             keyboard.append([InlineKeyboardButton(
-                f"{'آزاد کردن' if banned else 'بن کردن'} - {info['name']}",
+                f"{'آزاد کردن ✅' if banned else 'بن کردن 🚫'} - {info['name']}",
                 callback_data=f"{'unban' if banned else 'ban'}_{uid}"
             )])
         keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back")])
@@ -104,7 +123,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if uid not in data["banned"]:
             data["banned"].append(uid)
             save_data(data)
-        await query.edit_message_text(f"✅ کاربر {uid} بن شد.")
+        await query.edit_message_text(f"🚫 کاربر {uid} بن شد.")
 
     elif cb.startswith("unban_"):
         uid = cb[6:]
@@ -119,16 +138,23 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif cb == "add_account":
         context.user_data["awaiting_account"] = True
-        await query.edit_message_text("➕ اکانت‌ها را بفرست:\n`username:password`\nهر خط یک اکانت", parse_mode="Markdown")
+        await query.edit_message_text(
+            "➕ اکانت‌ها را بفرست:\n`username:password`\nهر خط یک اکانت",
+            parse_mode="Markdown"
+        )
 
     elif cb == "back":
+        bot_link = f"https://t.me/{BOT_USERNAME}"
         keyboard = [
             [InlineKeyboardButton("👥 لیست کاربران", callback_data="list_users")],
             [InlineKeyboardButton("➕ افزودن اکانت", callback_data="add_account")],
             [InlineKeyboardButton("📢 پیام همگانی", callback_data="broadcast")],
             [InlineKeyboardButton("📊 آمار", callback_data="stats")],
         ]
-        await query.edit_message_text("🔧 پنل مدیریت:", reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.edit_message_text(
+            f"🔧 پنل مدیریت:\n\n🔗 لینک ربات:\n{bot_link}",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
 
 async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
